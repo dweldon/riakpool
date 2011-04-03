@@ -6,8 +6,9 @@ Overview
 --------
 riakpool is an application for maintaining a dynamic pool of protocol buffer
 client connections to a riak database. It ensures that a given connection can
-only be in use by one external process at a time. Currently, riakpool will only
-connect to port 8087 on 127.0.0.1.
+only be in use by one external process at a time. By default, riakpool will
+connect to port 8087 on 127.0.0.1. Fill riak_pb_ip and riak_pb_port in
+application config for different connection point.
 
 Installation
 ------------
