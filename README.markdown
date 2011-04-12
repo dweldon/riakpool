@@ -27,3 +27,13 @@ the complete documentation by running `make doc`.
     {ok,pong}
     4> riakpool:count().
     1
+
+Starting the Pool
+-----------------
+Prior to any calls to `riakpool:execute/1`, the pool must be started. This can
+be accomplished in one of two ways:
+
+1. Before the server is started, set the riakpool application environment
+   variables `riakpool_host` and `riakpool_port`.
+2. After the server is started, call `riakpool:start_pool/0` or
+   `riakpool:start_pool/2` (see previous section).
