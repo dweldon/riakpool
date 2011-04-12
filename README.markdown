@@ -6,8 +6,7 @@ Overview
 --------
 riakpool is an application for maintaining a dynamic pool of protocol buffer
 client connections to a riak database. It ensures that a given connection can
-only be in use by one external process at a time. Currently, riakpool will only
-connect to port 8087 on 127.0.0.1.
+only be in use by one external process at a time.
 
 Installation
 ------------
@@ -22,7 +21,9 @@ the complete documentation by running `make doc`.
 
     1> application:start(riakpool).
     ok
-    2> riakpool:execute(fun(C) -> riakc_pb_socket:ping(C) end).
+    2> riakpool:start_pool("127.0.0.1", 8087).
+    ok
+    3> riakpool:execute(fun(C) -> riakc_pb_socket:ping(C) end).
     {ok,pong}
-    3> riakpool:count().
+    4> riakpool:count().
     1

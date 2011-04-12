@@ -10,3 +10,15 @@ start(_StartType, _StartArgs) ->
 
 stop(_State) ->
     ok.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+app_test() ->
+    application:start(riakpool),
+    riakpool:start_pool(),
+    Fun = fun(C) -> riakc_pb_socket:ping(C) end,
+    ?assertEqual({ok, pong}, riakpool:execute(Fun)),
+    application:stop(riakpool).
+
+-endif.
