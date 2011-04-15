@@ -3,7 +3,7 @@
 %% use a connection, a call to {@link execute/1} must be made. This will check
 %% out a connection from the pool, use it, and check it back in. This ensures
 %% that a given connection can only be in use by one external process at a time.
-%%  If no existing connections are found, a new one will be established. Note
+%% If no existing connections are found, a new one will be established. Note
 %% this means the pool will always be the size of the last peak need. The number
 %% of connections can be checked with {@link count/0}.
 %%
@@ -43,12 +43,12 @@ count() ->
         undefined -> 0
     end.
 
-%% @spec execute(Fun) -> {ok, Value::any()} | error
+%% @spec execute(Fun) -> {ok, Value::any()} | {error, any()}
 %%       Fun = function(pid())
 %% @doc Finds the next available connection pid from the pool and calls
-%% `Fun(Pid)'. Returns `{ok, Value}' if the call was successful, and `error'
-%% otherwise. If no connection could be found, a new connection will be
-%% established.
+%% `Fun(Pid)'. Returns `{ok, Value}' if the call was successful, and
+%% `{error, any()}' otherwise. If no connection could be found, a new connection
+%% will be established.
 %% ```
 %% > riakpool:execute(fun(C) -> riakc_pb_socket:ping(C) end).
 %% {ok,pong}
@@ -57,9 +57,9 @@ execute(Fun) ->
     case gen_server:call(?MODULE, check_out) of
         {ok, Pid} ->
             try {ok, Fun(Pid)}
-            catch _:_ -> error
+            catch _:E -> {error, E}
             after gen_server:cast(?MODULE, {check_in, Pid}) end;
-        error -> error
+        {error, E} -> {error, E}
     end.
 
 %% @spec start_link() -> {ok, pid()} | {error, any()}
@@ -98,11 +98,13 @@ handle_call({start_pool, Host, Port}, _From, undefined) ->
     end;
 handle_call({start_pool, _Host, _Port}, _From, State=#state{}) ->
     {reply, {error, pool_already_started}, State};
-handle_call(check_out, _From, undefined) -> {reply, error, undefined};
+handle_call(check_out, _From, undefined) ->
+    {reply, {error, pool_not_started}, undefined};
 handle_call(check_out, _From, State=#state{host=Host, port=Port, pids=Pids}) ->
     case next_pid(Host, Port, Pids) of
         {ok, Pid, NewPids} -> {reply, {ok, Pid}, State#state{pids=NewPids}};
-        {error, NewPids} -> {reply, error, State#state{pids=NewPids}}
+        {error, NewPids} ->
+            {reply, {error, connection_error}, State#state{pids=NewPids}}
     end;
 handle_call(_Request, _From, State) -> {reply, ok, State}.
 
@@ -185,7 +187,7 @@ next_pid(Host, Port, Pids) ->
         Fun1 = fun(C) -> riakc_pb_socket:ping(C) end,
         Fun2 = fun(_) -> riakc_pb_socket:ping(1) end,
         ?assertEqual({ok, pong}, execute(Fun1)),
-        ?assertEqual(error, execute(Fun2)),
+        ?assertMatch({error, _}, execute(Fun2)),
         ?assertEqual({ok, pong}, execute(Fun1)),
         riakpool:stop(),
         timer:sleep(10),
@@ -194,7 +196,7 @@ next_pid(Host, Port, Pids) ->
     execute_error_test() ->
         riakpool:start_link(),
         Fun = fun(C) -> riakc_pb_socket:ping(C) end,
-        ?assertEqual(error, execute(Fun)),
+        ?assertEqual({error, pool_not_started}, execute(Fun)),
         riakpool:stop(),
         timer:sleep(10),
         ?assertEqual(0, count()).
