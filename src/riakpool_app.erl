@@ -5,11 +5,9 @@
 -behaviour(application).
 -export([start/2, stop/1]).
 
-start(_StartType, _StartArgs) ->
-    riakpool_sup:start_link().
+start(_StartType, _StartArgs) -> riakpool_sup:start_link().
 
-stop(_State) ->
-    ok.
+stop(_State) -> ok.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -21,6 +19,8 @@ app_test() ->
     Fun = fun(C) -> riakc_pb_socket:ping(C) end,
     ?assertEqual({ok, pong}, riakpool:execute(Fun)),
     ?assertEqual(1, riakpool:count()),
-    application:stop(riakpool).
+    application:stop(riakpool),
+    application:unset_env(riakpool, riakpool_host),
+    application:unset_env(riakpool, riakpool_port).
 
 -endif.

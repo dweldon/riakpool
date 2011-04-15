@@ -25,8 +25,19 @@ the complete documentation by running `make doc`.
     ok
     3> riakpool:execute(fun(C) -> riakc_pb_socket:ping(C) end).
     {ok,pong}
-    4> riakpool:count().
+    4> riakpool_client:put(<<"groceries">>, <<"mine">>, <<"eggs">>).
+    ok
+    5> riakpool_client:get(<<"groceries">>, <<"mine">>).
+    {ok,<<"eggs">>}
+    6> riakpool_client:list_keys(<<"groceries">>).
+    {ok,[<<"mine">>]}
+    7> riakpool_client:delete(<<"groceries">>, <<"mine">>).
+    ok
+    8> riakpool:count().
     1
+
+Note that the use of riakpool_client is completely optional - it is simply a
+collection of convenience functions which call riakpool:execute/1.
 
 Starting the Pool
 -----------------
