@@ -83,12 +83,12 @@ stop() -> gen_server:cast(?MODULE, stop).
 
 %% @hidden
 init([]) ->
+    process_flag(trap_exit, true),
     case [application:get_env(P) || P <- [riakpool_host, riakpool_port]] of
         [{ok, Host}, {ok, Port}] when is_integer(Port) ->
-            self() ! {start_pool, Host, Port};
-        _ -> ok
-    end,
-    {ok, undefined}.
+            {ok, new_state(Host, Port)};
+        _ -> {ok, undefined}
+    end.
 
 %% @hidden
 handle_call({start_pool, Host, Port}, _From, undefined) ->
@@ -116,8 +116,6 @@ handle_cast(stop, State) -> {stop, normal, State};
 handle_cast(_Msg, State) -> {noreply, State}.
 
 %% @hidden
-handle_info({start_pool, Host, Port}, undefined) ->
-    {noreply, new_state(Host, Port)};
 handle_info(_Info, State) -> {noreply, State}.
 
 %% @hidden
@@ -179,62 +177,62 @@ next_pid(Host, Port, Pids) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-    execute_test() ->
-        riakpool_connection_sup:start_link(),
-        riakpool:start_link(),
-        riakpool:start_pool(),
-        ?assertEqual(1, count()),
-        Fun1 = fun(C) -> riakc_pb_socket:ping(C) end,
-        Fun2 = fun(_) -> riakc_pb_socket:ping(1) end,
-        ?assertEqual({ok, pong}, execute(Fun1)),
-        ?assertMatch({error, _}, execute(Fun2)),
-        ?assertEqual({ok, pong}, execute(Fun1)),
-        riakpool:stop(),
-        timer:sleep(10),
-        ?assertEqual(0, count()).
+execute_test() ->
+    riakpool_connection_sup:start_link(),
+    riakpool:start_link(),
+    riakpool:start_pool(),
+    ?assertEqual(1, count()),
+    Fun1 = fun(C) -> riakc_pb_socket:ping(C) end,
+    Fun2 = fun(_) -> riakc_pb_socket:ping(1) end,
+    ?assertEqual({ok, pong}, execute(Fun1)),
+    ?assertMatch({error, _}, execute(Fun2)),
+    ?assertEqual({ok, pong}, execute(Fun1)),
+    riakpool:stop(),
+    timer:sleep(10),
+    ?assertEqual(0, count()).
 
-    execute_error_test() ->
-        riakpool:start_link(),
-        Fun = fun(C) -> riakc_pb_socket:ping(C) end,
-        ?assertEqual({error, pool_not_started}, execute(Fun)),
-        riakpool:stop(),
-        timer:sleep(10),
-        ?assertEqual(0, count()).
+execute_error_test() ->
+    riakpool:start_link(),
+    Fun = fun(C) -> riakc_pb_socket:ping(C) end,
+    ?assertEqual({error, pool_not_started}, execute(Fun)),
+    riakpool:stop(),
+    timer:sleep(10),
+    ?assertEqual(0, count()).
 
-    start_pool_test() ->
-        riakpool_connection_sup:start_link(),
-        riakpool:start_link(),
-        {H, P} = {"localhost", 8000},
-        ?assertEqual({error, connection_error}, riakpool:start_pool(H, P)),
-        ?assertEqual(ok, riakpool:start_pool()),
-        ?assertEqual({error, pool_already_started}, riakpool:start_pool()),
-        riakpool:stop(),
-        timer:sleep(10),
-        ?assertEqual(0, count()).
+start_pool_test() ->
+    riakpool_connection_sup:start_link(),
+    riakpool:start_link(),
+    {H, P} = {"localhost", 8000},
+    ?assertEqual({error, connection_error}, riakpool:start_pool(H, P)),
+    ?assertEqual(ok, riakpool:start_pool()),
+    ?assertEqual({error, pool_already_started}, riakpool:start_pool()),
+    riakpool:stop(),
+    timer:sleep(10),
+    ?assertEqual(0, count()).
 
-    next_pid_test() ->
-        riakpool_connection_sup:start_link(),
-        {H, P} = {"localhost", 8087},
-        ?assertEqual(0, count()),
-        {ok, P1} = new_connection(H, P),
-        {ok, P2} = new_connection(H, P),
-        {ok, P3} = new_connection(H, P),
-        ?assertEqual(3, count()),
-        riakc_pb_socket:stop(P1),
-        riakc_pb_socket:stop(P2),
-        ?assertEqual(1, count()),
-        Q0 = queue:new(),
-        Q = queue:from_list([P1, P2, P3]),
-        ?assertMatch({ok, P3, Q0}, next_pid(H, P, Q)),
-        riakc_pb_socket:stop(P3),
-        {ok, P4, Q0} = next_pid(H, P, Q0),
-        ?assertEqual(1, count()),
-        riakc_pb_socket:stop(P4),
-        ?assertEqual(0, count()).
+next_pid_test() ->
+    riakpool_connection_sup:start_link(),
+    {H, P} = {"localhost", 8087},
+    ?assertEqual(0, count()),
+    {ok, P1} = new_connection(H, P),
+    {ok, P2} = new_connection(H, P),
+    {ok, P3} = new_connection(H, P),
+    ?assertEqual(3, count()),
+    riakc_pb_socket:stop(P1),
+    riakc_pb_socket:stop(P2),
+    ?assertEqual(1, count()),
+    Q0 = queue:new(),
+    Q = queue:from_list([P1, P2, P3]),
+    ?assertMatch({ok, P3, Q0}, next_pid(H, P, Q)),
+    riakc_pb_socket:stop(P3),
+    {ok, P4, Q0} = next_pid(H, P, Q0),
+    ?assertEqual(1, count()),
+    riakc_pb_socket:stop(P4),
+    ?assertEqual(0, count()).
 
-    next_pid_error_test() ->
-        {H, P} = {"localhost", 8000},
-        Q0 = queue:new(),
-        ?assertMatch({error, Q0}, next_pid(H, P, Q0)).
+next_pid_error_test() ->
+    {H, P} = {"localhost", 8000},
+    Q0 = queue:new(),
+    ?assertMatch({error, Q0}, next_pid(H, P, Q0)).
 
 -endif.
