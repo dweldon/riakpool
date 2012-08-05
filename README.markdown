@@ -1,5 +1,5 @@
 <p align="right">
-    <img src="http://www.basho.com/images/riaklogo.png">
+    <img src="http://wiki.basho.com/images/riaklogo.png">
 </p>
 
 Overview
@@ -10,7 +10,7 @@ only be in use by one external process at a time.
 
 Installation
 ------------
-    $ git clone git@github.com:iac/riakpool.git
+    $ git clone git://github.com/dweldon/riakpool.git
     $ cd riakpool
     $ make
 
