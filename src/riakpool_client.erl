@@ -5,15 +5,15 @@
 -module(riakpool_client).
 -export([delete/2, get/2, list_keys/1, put/3]).
 
-%% @spec delete(binary(), binary()) -> ok
 %% @doc Delete `Key' from `Bucket'.
+-spec delete(binary(), binary()) -> ok.
 delete(Bucket, Key) ->
     riakpool:execute(fun(C) -> riakc_pb_socket:delete(C, Bucket, Key) end), ok.
 
-%% @spec get(binary(), binary()) -> {ok, binary()} | {error, any()}
 %% @doc Returns the value associated with `Key' in `Bucket' as `{ok, binary()}'.
 %% If an error was encountered or the value was not present, returns
 %% `{error, any()}'.
+-spec get(binary(), binary()) -> {ok, binary()} | {error, any()}.
 get(Bucket, Key) ->
     Fun =
         fun(C) ->
@@ -28,9 +28,9 @@ get(Bucket, Key) ->
         {error, E} -> {error, E}
     end.
 
-%% @spec list_keys(binary()) -> {ok, list()} | {error, any()}
 %% @doc Returns the list of keys in `Bucket' as `{ok, list()}'. If an error was
 %% encountered, returns `{error, any()}'.
+-spec list_keys(binary()) -> {ok, list()} | {error, any()}.
 list_keys(Bucket) ->
     Fun = fun(C) -> riakc_pb_socket:list_keys(C, Bucket) end,
     case riakpool:execute(Fun) of
@@ -38,9 +38,9 @@ list_keys(Bucket) ->
         {error, E} -> {error, E}
     end.
 
-%% @spec put(binary(), binary(), binary()) -> ok
 %% @doc Associates `Key' with `Value' in `Bucket'. If `Key' already exists in
 %% `Bucket', an update will be preformed.
+-spec put(binary(), binary(), binary()) -> ok.
 put(Bucket, Key, Value) ->
     Fun =
         fun(C) ->
