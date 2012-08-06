@@ -58,21 +58,21 @@ put(Bucket, Key, Value) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-    client_test() ->
-        {B, K, V1, V2} = {<<"groceries">>, <<"mine">>, <<"eggs">>, <<"toast">>},
-        application:start(riakpool),
-        ?assertMatch({error, _}, list_keys(B)),
-        ?assertMatch({error, _}, get(B, K)),
-        riakpool:start_pool(),
-        ?assertEqual({ok, []}, list_keys(B)),
-        ?assertMatch({error, _}, get(B, K)),
-        ?assertEqual(ok, put(B, K, V1)),
-        ?assertEqual({ok, V1}, get(B, K)),
-        ?assertEqual(ok, put(B, K, V2)),
-        ?assertEqual({ok, V2}, get(B, K)),
-        ?assertEqual({ok, [K]}, list_keys(B)),
-        ?assertEqual(ok, delete(B, K)),
-        ?assertEqual({ok, []}, list_keys(B)),
-        application:stop(riakpool).
+client_test() ->
+    {B, K, V1, V2} = {<<"groceries">>, <<"mine">>, <<"eggs">>, <<"toast">>},
+    application:start(riakpool),
+    ?assertMatch({error, _}, list_keys(B)),
+    ?assertMatch({error, _}, get(B, K)),
+    riakpool:start_pool(),
+    ?assertEqual({ok, []}, list_keys(B)),
+    ?assertMatch({error, notfound}, get(B, K)),
+    ?assertEqual(ok, put(B, K, V1)),
+    ?assertEqual({ok, V1}, get(B, K)),
+    ?assertEqual(ok, put(B, K, V2)),
+    ?assertEqual({ok, V2}, get(B, K)),
+    ?assertEqual({ok, [K]}, list_keys(B)),
+    ?assertEqual(ok, delete(B, K)),
+    ?assertMatch({error, notfound}, get(B, K)),
+    application:stop(riakpool).
 
 -endif.
