@@ -3,7 +3,7 @@
 %% riakpool.
 
 -module(riakpool_client).
--export([delete/2, get/2, list_keys/1, put/3]).
+-export([delete/2, get/2, list_keys/1, post/3, put/3]).
 
 %% @doc Delete `Key' from `Bucket'.
 -spec delete(binary(), binary()) -> ok.
@@ -38,6 +38,17 @@ list_keys(Bucket) ->
         {error, E} -> {error, E}
     end.
 
+%% @doc Associates `Key' with `Value' in `Bucket' without checking if `Key'
+%% already exists in `Bucket'.
+-spec post(binary(), binary(), binary()) -> ok.
+post(Bucket, Key, Value) ->
+    Fun =
+        fun(C) ->
+            Object = riakc_obj:new(Bucket, Key, Value),
+            riakc_pb_socket:put(C, Object)
+        end,
+    riakpool:execute(Fun), ok.
+
 %% @doc Associates `Key' with `Value' in `Bucket'. If `Key' already exists in
 %% `Bucket', an update will be preformed.
 -spec put(binary(), binary(), binary()) -> ok.
@@ -60,19 +71,45 @@ put(Bucket, Key, Value) ->
 
 client_test() ->
     {B, K, V1, V2} = {<<"groceries">>, <<"mine">>, <<"eggs">>, <<"toast">>},
+
+    %% start the application
     application:start(riakpool),
+
+    %% nothing should work until the pool is started
     ?assertMatch({error, _}, list_keys(B)),
     ?assertMatch({error, _}, get(B, K)),
+
+    %% start the pool
     riakpool:start_pool(),
+
+    %% verify nothing is in B
     ?assertEqual({ok, []}, list_keys(B)),
     ?assertMatch({error, notfound}, get(B, K)),
-    ?assertEqual(ok, put(B, K, V1)),
+
+    %% post {K, V1}
+    ?assertEqual(ok, post(B, K, V1)),
     ?assertEqual({ok, V1}, get(B, K)),
-    ?assertEqual(ok, put(B, K, V2)),
-    ?assertEqual({ok, V2}, get(B, K)),
-    ?assertEqual({ok, [K]}, list_keys(B)),
+
+    %% delete K
     ?assertEqual(ok, delete(B, K)),
     ?assertMatch({error, notfound}, get(B, K)),
+
+    %% put {K, V1}
+    ?assertEqual(ok, put(B, K, V1)),
+    ?assertEqual({ok, V1}, get(B, K)),
+
+    %% put {K, V2}
+    ?assertEqual(ok, put(B, K, V2)),
+    ?assertEqual({ok, V2}, get(B, K)),
+
+    %% verify K is in the list of keys
+    ?assertEqual({ok, [K]}, list_keys(B)),
+
+    %% delete K
+    ?assertEqual(ok, delete(B, K)),
+    ?assertMatch({error, notfound}, get(B, K)),
+
+    %% stop the application
     application:stop(riakpool).
 
 -endif.
