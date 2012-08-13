@@ -1,4 +1,4 @@
-REBAR := ./rebar
+REBAR := rebar
 
 .PHONY: all deps doc test clean update release
 
