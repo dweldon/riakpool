@@ -158,8 +158,8 @@ new_connection(Host, Port) ->
 %% pid could be found, a new one will be established. Returns {ok, Pid, NewPids}
 %% where NewPids is the queue after any necessary dequeues. Returns error if no
 %% live connection could be found and no new connection could be established.
--spec next_pid(host(), integer(), queue()) -> {ok, pid(), queue()} |
-                                              {error, queue()}.
+-spec next_pid(host(), integer(), queue:queue()) -> {ok, pid(), queue:queue()} |
+                                                    {error, queue:queue()}.
 next_pid(Host, Port, Pids) ->
     case queue:out(Pids) of
         {{value, Pid}, NewPids} ->
